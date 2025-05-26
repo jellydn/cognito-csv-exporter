@@ -4,6 +4,8 @@ import datetime
 import time
 import sys
 import argparse
+import os
+from pathlib import Path
 from colorama import Fore
 
 REGION = ''
@@ -24,7 +26,7 @@ parser.add_argument('--user-pool-id', type=str, help="The user pool ID", require
 parser.add_argument('--region', type=str, default='us-east-1', help="The user pool region")
 parser.add_argument('--profile', type=str, default='', help="The aws profile")
 parser.add_argument('--starting-token', type=str, default='', help="Starting pagination token")
-parser.add_argument('-f', '--file-name', type=str, help="CSV File name")
+parser.add_argument('-f', '--file-name', type=str, help="CSV file name or path (automatically adds .csv extension if not provided)")
 parser.add_argument('--num-records', type=int, help="Max Number of Cognito Records to be exported")
 args = parser.parse_args()
 
@@ -38,18 +40,57 @@ if args.all_attributes:
 elif args.export_attributes:
     REQUIRED_ATTRIBUTE = list(args.export_attributes)
 
+def validate_and_prepare_filename(filename):
+    """Validate and prepare the output filename with proper path handling"""
+    if not filename:
+        # Generate default filename with timestamp
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        return f"CognitoUsers_{timestamp}.csv"
+
+    # Convert to Path object for better handling
+    file_path = Path(filename)
+
+    # Add .csv extension if not present
+    if not file_path.suffix.lower() == '.csv':
+        file_path = file_path.with_suffix('.csv')
+
+    # Create directory if it doesn't exist
+    if file_path.parent != Path('.'):
+        try:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            print(Fore.CYAN + f"INFO: Created directory: {file_path.parent}")
+        except Exception as e:
+            print(Fore.RED + f"ERROR: Cannot create directory {file_path.parent}: {str(e)}")
+            exit(1)
+
+    # Validate filename
+    try:
+        # Test if we can create/write to the file
+        test_file = open(file_path, 'w')
+        test_file.close()
+        os.remove(file_path)  # Clean up test file
+    except Exception as e:
+        print(Fore.RED + f"ERROR: Cannot write to file {file_path}: {str(e)}")
+        exit(1)
+
+    return str(file_path)
+
 if args.user_pool_id:
     USER_POOL_ID = args.user_pool_id
 if args.region:
     REGION = args.region
 if args.file_name:
-    CSV_FILE_NAME = args.file_name
+    CSV_FILE_NAME = validate_and_prepare_filename(args.file_name)
+else:
+    CSV_FILE_NAME = validate_and_prepare_filename(None)
 if args.num_records:
     MAX_NUMBER_RECORDS = args.num_records
 if args.profile:
     PROFILE = args.profile
 if args.starting_token:
     STARTING_TOKEN = args.starting_token
+
+print(Fore.CYAN + f"INFO: Output file will be: {CSV_FILE_NAME}")
 
 def datetimeconverter(o):
     if isinstance(o, datetime.datetime):
@@ -115,10 +156,11 @@ csv_new_line = {REQUIRED_ATTRIBUTE[i]: '' for i in range(len(REQUIRED_ATTRIBUTE)
 try:
     csv_file = open(CSV_FILE_NAME, 'w' ,encoding="utf-8")
     csv_file.write(",".join(csv_new_line.keys()) + '\n')
+    print(Fore.GREEN + f"INFO: Successfully created CSV file: {CSV_FILE_NAME}")
 except Exception as err:
     error_message = repr(err)
-    print(Fore.RED + "\nERROR: Can not create file: " + CSV_FILE_NAME)
-    print("\tError Reason: " + error_message)
+    print(Fore.RED + f"\nERROR: Cannot create file: {CSV_FILE_NAME}")
+    print(f"\tError Reason: {error_message}")
     exit()
 
 pagination_counter = 0
@@ -184,3 +226,5 @@ while pagination_token is not None:
 
 """ Close File """
 csv_file.close()
+print(Fore.GREEN + f"✅ Export completed successfully! File saved as: {CSV_FILE_NAME}")
+print(Fore.CYAN + f"📊 Total records exported: {exported_records_counter}")

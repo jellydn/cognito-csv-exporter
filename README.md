@@ -37,8 +37,14 @@ In order to use this script you should have Python 2 or Python 3 installed on yo
 # Export all user attributes automatically
 uv run python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' --all-attributes
 
-# Or export specific attributes
+# Export specific attributes
 uv run python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' -attr Username email_verified given_name family_name UserCreateDate
+
+# Export with custom file name
+uv run python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' --all-attributes -f my_users.csv
+
+# Export to specific directory
+uv run python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' --all-attributes -f exports/users_backup
 ```
 
 ### Using pip/traditional method
@@ -47,6 +53,7 @@ To start export proccess you shout run next command (**Note**: use `python3` if 
 
 - Export all attributes: `$ python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' --all-attributes`
 - Export specific attributes: `$ python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' -attr Username email_verified given_name family_name UserCreateDate`
+- Export with custom file name: `$ python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' --all-attributes -f my_export.csv`
 
 ### Output
 
@@ -59,7 +66,7 @@ To start export proccess you shout run next command (**Note**: use `python3` if 
 - `--all-attributes` [_Optional_] - Export all user attributes automatically (discovers all available attributes)
 - `-attr` or `--export-attributes` [_Optional_] - List of specific attributes to be saved in CSV file
 - `--region` [_Optional_] - The user pool region the user pool on which the export should be performed _Default_: `us-east-1`
-- `-f` or `--file-name` [_Optional_] - CSV File name or path. _Default_: `CognitoUsers.csv`
+- `-f` or `--file-name` [_Optional_] - CSV file name or path (automatically adds .csv extension if not provided, creates directories if needed). _Default_: `CognitoUsers_TIMESTAMP.csv`
 - `--num-records` [_Optional_] - Max Number of Cognito Records tha will be exported. _Default_: **0** - All
 - `--profile` [_Optional_] - The AWS profile to use, if not provided the default one will be used
 - `--starting-token` [_Optional_] - The starting pagination token to continue from if provided
