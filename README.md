@@ -34,6 +34,10 @@ In order to use this script you should have Python 2 or Python 3 installed on yo
 ### Using UV
 
 ```bash
+# Export all user attributes automatically
+uv run python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' --all-attributes
+
+# Or export specific attributes
 uv run python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' -attr Username email_verified given_name family_name UserCreateDate
 ```
 
@@ -41,7 +45,8 @@ uv run python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' -attr Use
 
 To start export proccess you shout run next command (**Note**: use `python3` if you have Python 3 instaled)
 
-- `$ python CognitoUserToCSV.py  --user-pool-id 'us-east-1_XXXXXXXXX' -attr Username email_verified given_name family_name UserCreateDate`
+- Export all attributes: `$ python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' --all-attributes`
+- Export specific attributes: `$ python CognitoUserToCSV.py --user-pool-id 'us-east-1_XXXXXXXXX' -attr Username email_verified given_name family_name UserCreateDate`
 
 ### Output
 
@@ -51,12 +56,15 @@ To start export proccess you shout run next command (**Note**: use `python3` if 
 ### Script Arguments
 
 - `--user-pool-id` [__Required__] - The user pool ID for the user pool on which the export should be performed
-- `-attr` or `--export-attributes` [__Required__] - List of Attributes that will be saved in CSV file
+- `--all-attributes` [_Optional_] - Export all user attributes automatically (discovers all available attributes)
+- `-attr` or `--export-attributes` [_Optional_] - List of specific attributes to be saved in CSV file
 - `--region` [_Optional_] - The user pool region the user pool on which the export should be performed _Default_: `us-east-1`
 - `-f` or `--file-name` [_Optional_] - CSV File name or path. _Default_: `CognitoUsers.csv`
 - `--num-records` [_Optional_] - Max Number of Cognito Records tha will be exported. _Default_: **0** - All
 - `--profile` [_Optional_] - The AWS profile to use, if not provided the default one will be used
 - `--starting-token` [_Optional_] - The starting pagination token to continue from if provided
+
+**Note**: Either `--all-attributes` or `--export-attributes` must be specified. The `--all-attributes` flag will automatically discover and export all available user properties and custom attributes.
 
 ###### Note:
 
