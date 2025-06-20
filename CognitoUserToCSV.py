@@ -126,11 +126,108 @@ def discover_all_attributes(user_records):
 
     return sorted(list(all_attrs))
 
-if PROFILE:
-    session = boto3.Session(profile_name=PROFILE)
-    client = session.client('cognito-idp', REGION)
-else:
-    client = boto3.client('cognito-idp', REGION)
+def list_available_user_pools(client, region):
+    """List available user pools in the region for debugging"""
+    try:
+        print(Fore.YELLOW + f"DEBUG: Listing user pools in region '{region}'...")
+        response = client.list_user_pools(MaxResults=60)
+
+        if response.get('UserPools'):
+            print(Fore.CYAN + f"DEBUG: Found {len(response['UserPools'])} user pools:")
+            for pool in response['UserPools']:
+                pool_id = pool.get('Id', 'Unknown')
+                pool_name = pool.get('Name', 'Unknown')
+                creation_date = pool.get('CreationDate', 'Unknown')
+                print(Fore.CYAN + f"  - ID: {pool_id}, Name: {pool_name}, Created: {creation_date}")
+        else:
+            print(Fore.YELLOW + f"DEBUG: No user pools found in region '{region}'")
+
+    except Exception as e:
+        print(Fore.YELLOW + f"DEBUG: Could not list user pools: {str(e)}")
+
+# Enhanced AWS session setup with debugging
+print(Fore.CYAN + f"INFO: Setting up AWS connection...")
+print(Fore.CYAN + f"INFO: User Pool ID: {USER_POOL_ID}")
+print(Fore.CYAN + f"INFO: Region: {REGION}")
+print(Fore.CYAN + f"INFO: Profile: {PROFILE if PROFILE else 'default'}")
+
+try:
+    if PROFILE:
+        print(Fore.YELLOW + f"DEBUG: Creating session with profile '{PROFILE}'...")
+        session = boto3.Session(profile_name=PROFILE)
+
+        # Check credentials
+        credentials = session.get_credentials()
+        if credentials:
+            print(Fore.GREEN + f"DEBUG: Successfully loaded credentials for profile '{PROFILE}'")
+            print(Fore.CYAN + f"DEBUG: Access Key ID: {credentials.access_key[:8]}..." if credentials.access_key else "DEBUG: No access key found")
+        else:
+            print(Fore.RED + f"ERROR: No credentials found for profile '{PROFILE}'")
+            print(Fore.YELLOW + "HINT: Check if the profile exists in ~/.aws/credentials or ~/.aws/config")
+            exit(1)
+
+        # Get actual region being used
+        actual_region = session.region_name or REGION
+        print(Fore.CYAN + f"DEBUG: Session region: {actual_region}")
+
+        client = session.client('cognito-idp', region_name=REGION)
+    else:
+        print(Fore.YELLOW + f"DEBUG: Using default AWS credentials...")
+        client = boto3.client('cognito-idp', region_name=REGION)
+
+        # Try to get credentials info
+        try:
+            sts_client = boto3.client('sts', region_name=REGION)
+            identity = sts_client.get_caller_identity()
+            print(Fore.GREEN + f"DEBUG: Using AWS account: {identity.get('Account', 'Unknown')}")
+            print(Fore.CYAN + f"DEBUG: User ARN: {identity.get('Arn', 'Unknown')}")
+        except Exception as e:
+            print(Fore.RED + f"DEBUG: Could not get caller identity: {str(e)}")
+
+    print(Fore.GREEN + f"INFO: AWS client created successfully")
+    print(Fore.CYAN + f"DEBUG: Client region: {client.meta.region_name}")
+
+except Exception as e:
+    print(Fore.RED + f"ERROR: Failed to create AWS client: {str(e)}")
+    exit(1)
+
+# Validate user pool exists first
+print(Fore.YELLOW + f"DEBUG: Validating user pool access...")
+try:
+    # Try to describe the user pool to validate it exists and we have access
+    user_pool_info = client.describe_user_pool(UserPoolId=USER_POOL_ID)
+    print(Fore.GREEN + f"DEBUG: User pool found successfully!")
+    print(Fore.CYAN + f"DEBUG: User pool name: {user_pool_info['UserPool'].get('Name', 'Unknown')}")
+    print(Fore.CYAN + f"DEBUG: User pool domain: {user_pool_info['UserPool'].get('Domain', 'None')}")
+    print(Fore.CYAN + f"DEBUG: User pool creation date: {user_pool_info['UserPool'].get('CreationDate', 'Unknown')}")
+    print(Fore.CYAN + f"DEBUG: Estimated number of users: {user_pool_info['UserPool'].get('EstimatedNumberOfUsers', 'Unknown')}")
+except client.exceptions.ClientError as err:
+    error_code = err.response["Error"]["Code"]
+    error_message = err.response["Error"]["Message"]
+    print(Fore.RED + f"ERROR: Failed to access user pool")
+    print(Fore.RED + f"Error Code: {error_code}")
+    print(Fore.RED + f"Error Message: {error_message}")
+
+    # Provide specific debugging hints
+    if error_code == "ResourceNotFoundException":
+        print(Fore.YELLOW + "DEBUGGING HINTS:")
+        print(Fore.YELLOW + f"  1. Verify the user pool ID '{USER_POOL_ID}' is correct")
+        print(Fore.YELLOW + f"  2. Ensure the user pool exists in region '{REGION}'")
+        print(Fore.YELLOW + f"  3. Check if you have the correct AWS account/profile")
+
+        # List available user pools for comparison
+        list_available_user_pools(client, REGION)
+
+    elif error_code == "AccessDeniedException":
+        print(Fore.YELLOW + "DEBUGGING HINTS:")
+        print(Fore.YELLOW + f"  1. Check if your AWS credentials have cognito-idp permissions")
+        print(Fore.YELLOW + f"  2. Required permissions: cognito-idp:DescribeUserPool, cognito-idp:ListUsers")
+        print(Fore.YELLOW + f"  3. Verify the IAM policy attached to your user/role")
+
+    exit(1)
+except Exception as err:
+    print(Fore.RED + f"ERROR: Unexpected error while validating user pool: {str(err)}")
+    exit(1)
 
 # If all attributes mode, we need to discover attributes first
 if ALL_ATTRIBUTES:
@@ -144,13 +241,15 @@ if ALL_ATTRIBUTES:
         REQUIRED_ATTRIBUTE = discover_all_attributes(sample_records)
         print(Fore.GREEN + f"Found {len(REQUIRED_ATTRIBUTE)} unique attributes: {', '.join(REQUIRED_ATTRIBUTE)}")
     except client.exceptions.ClientError as err:
+        error_code = err.response["Error"]["Code"]
         error_message = err.response["Error"]["Message"]
-        print(Fore.RED + "Please Check your Cognito User Pool configs")
-        print("Error Reason: " + error_message)
-        exit()
+        print(Fore.RED + "ERROR: Failed to list users for attribute discovery")
+        print(Fore.RED + f"Error Code: {error_code}")
+        print(Fore.RED + f"Error Message: {error_message}")
+        exit(1)
     except Exception as err:
         print(Fore.RED + "Error during attribute discovery: " + str(err))
-        exit()
+        exit(1)
 
 csv_new_line = {REQUIRED_ATTRIBUTE[i]: '' for i in range(len(REQUIRED_ATTRIBUTE))}
 try:
@@ -176,15 +275,18 @@ while pagination_token is not None:
             Limit = LIMIT if LIMIT < MAX_NUMBER_RECORDS else MAX_NUMBER_RECORDS
         )
     except client.exceptions.ClientError as err:
+        error_code = err.response["Error"]["Code"]
         error_message = err.response["Error"]["Message"]
-        print(Fore.RED + "Please Check your Cognito User Pool configs")
-        print("Error Reason: " + error_message)
+        print(Fore.RED + f"ERROR: Failed to list users during export")
+        print(Fore.RED + f"Error Code: {error_code}")
+        print(Fore.RED + f"Error Message: {error_message}")
+        print(Fore.RED + f"Pagination Token: {pagination_token}")
         csv_file.close()
-        exit()
-    except:
-        print(Fore.RED + "Something else went wrong")
+        exit(1)
+    except Exception as err:
+        print(Fore.RED + f"ERROR: Unexpected error during export: {str(err)}")
         csv_file.close()
-        exit()
+        exit(1)
 
     """ Check if there next paginatioon is exist """
     if set(["PaginationToken","NextToken"]).intersection(set(user_records)):
