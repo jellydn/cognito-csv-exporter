@@ -1,11 +1,3 @@
-datetimeconverter
-cliend
-atrributes
-strerror
-paginatioon
-requ
-Proccess
-Infor
 boto
 botocore
 colorama
@@ -13,6 +5,5 @@ pyproject
 venv
 jmespath
 dateutil
-proccess
-instaled
-intire
+extrasaction
+Stubber

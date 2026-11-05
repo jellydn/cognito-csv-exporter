@@ -17,6 +17,8 @@
     "node_modules",
     "dist",
     "build",
-    "/cspell-tool.txt"
+    "cspell-tool.txt",
+    ".venv",
+    "uv.lock"
   ]
 }
