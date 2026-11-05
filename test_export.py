@@ -227,6 +227,20 @@ class ExportTests(unittest.TestCase):
             self.assertEqual(rows[0]["UserCreateDate"], "2026-01-02 00:00:00")
             self.assertNotIn("ignored", rows[0])
 
+    def test_dotted_filename_keeps_existing_name(self):
+        with tempfile.TemporaryDirectory() as directory:
+            unrelated = Path(directory) / "users.csv"
+            unrelated.write_text("keep")
+            self.run_export(
+                Path(directory) / "users.v2",
+                [[{"Username": "one"}]],
+                "-attr",
+                "Username",
+            )
+            self.assertEqual(unrelated.read_text(), "keep")
+            with (Path(directory) / "users.v2.csv").open(newline="") as stream:
+                self.assertEqual(list(csv.reader(stream)), [["Username"], ["one"]])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -28,12 +28,13 @@ def validate_and_prepare_filename(filename):
         filename = f"CognitoUsers_{timestamp}.csv"
     file_path = Path(filename)
     if file_path.suffix.lower() != ".csv":
-        file_path = file_path.with_suffix(".csv")
+        file_path = file_path.with_name(file_path.name + ".csv")
     file_path.parent.mkdir(parents=True, exist_ok=True)
     return file_path
 
 
 def get_list_cognito_users(cognito_idp_client, user_pool_id, token, limit):
+    """Fetch one page with the supplied client and optional resume token."""
     parameters = {"UserPoolId": user_pool_id, "Limit": limit}
     if token:
         parameters["PaginationToken"] = token
@@ -41,6 +42,7 @@ def get_list_cognito_users(cognito_idp_client, user_pool_id, token, limit):
 
 
 def main():
+    """Export the requested records and return a process exit status."""
     parser = argparse.ArgumentParser(
         description="Export Cognito User Pool records to CSV",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
