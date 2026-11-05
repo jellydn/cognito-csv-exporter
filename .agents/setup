@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# Python, uv, and Bun are included in the Amp orb base image.
+python3 --version
+uv --version
+bun --version
+
+SECONDS=0
+printf '\nInstalling Python dependencies\n'
+uv sync
+printf 'Python dependencies ready in %ss\n' "$SECONDS"
+
+SECONDS=0
+printf '\nCaching code quality tools\n'
+uvx ruff --version
+bunx cspell --version
+printf 'Code quality tools ready in %ss\n' "$SECONDS"
+
+.agents/resume

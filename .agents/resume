@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# Check restored dependencies without downloads or AWS authentication.
+.venv/bin/python -c 'import boto3, botocore, colorama; print("Python dependencies ready")'

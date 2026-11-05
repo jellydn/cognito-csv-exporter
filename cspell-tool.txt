@@ -7,3 +7,5 @@ jmespath
 dateutil
 extrasaction
 Stubber
+bunx
+pipefail

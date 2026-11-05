@@ -36,3 +36,6 @@ venv.bak/
 # UV specific
 .python-version
 uv.lock
+
+# Amp runtime portal metadata
+.amp/portals/*

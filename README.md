@@ -85,6 +85,12 @@ uvx ruff check CognitoUserToCSV.py test_export.py
 uvx ruff format --check CognitoUserToCSV.py test_export.py
 ```
 
+### Amp orbs
+
+`.agents/setup` installs the Python dependencies and caches Ruff and cspell for fresh orbs. Amp can reuse these dependencies in project snapshots. The script uses Python, uv, and Bun from the orb base image.
+
+`.agents/resume` checks the restored Python dependencies without installing packages or contacting AWS. Tests use stubbed AWS responses and need no credentials. To export real users, configure AWS credentials separately.
+
 ###### Note:
 
 To back up your entire Cognito user pool, see [cognito-backup-restore](https://www.npmjs.com/package/cognito-backup-restore).
